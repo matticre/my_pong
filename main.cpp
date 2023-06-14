@@ -1,6 +1,15 @@
 #include <iostream>
+#include <chrono>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+
+enum Buttons
+{
+    PaddleOneUp   = 0,
+    PaddleOneDown = 0,
+    PaddleTwoUp   = 0,
+    PaddleTwoDown = 0,
+};
 
 const int WINDOW_WIDTH  = 1280;
 const int WINDOW_HEIGHT = 720;
@@ -9,7 +18,7 @@ const int BALL_HEIGHT   = 15;
 const int PADDLE_WIDTH    = 10;
 const int PADDLE_HEIGHT   = 100;
 
-
+const float PADDLE_SPEED  = 1.0f;
 
 class Vec2
 {
@@ -72,13 +81,28 @@ class Ball
 class Paddle
 {
     public:
-        Paddle(Vec2 position) : position(position)
+        Paddle(Vec2 position, Vec2 velocity) : position(position), velocity(velocity)
         {
             rect.x = static_cast<int>(position.x);
             rect.y = static_cast<int>(position.y);
             rect.h = PADDLE_HEIGHT;
             rect.w = PADDLE_WIDTH;
         }
+
+        void Update (float dt)
+        {
+            position += velocity * dt;
+
+            if (position.y<0)
+            {
+                position.y=0;
+            }
+            else if (position.y > (WINDOW_HEIGHT - PADDLE_HEIGHT) )
+            {
+                position.y = WINDOW_HEIGHT - PADDLE_HEIGHT;
+            }
+        }
+
 
         void Draw(SDL_Renderer* renderer )
         {
@@ -88,6 +112,7 @@ class Paddle
         } 
 
         Vec2 position;
+        Vec2 velocity;
         SDL_Rect rect{};
 
 };
@@ -152,18 +177,20 @@ int main (){
     Ball ball (Vec2( (WINDOW_WIDTH / 2.0f) - (BALL_WIDTH/2.0f), (WINDOW_HEIGHT / 2.0f) - (BALL_HEIGHT/2.0f) ));
     
     // creating the paddles
-    Paddle paddleOne( Vec2( 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f));
-    Paddle paddleTwo( Vec2( WINDOW_WIDTH - 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f));
+    Paddle paddleOne( Vec2( 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f), Vec2(0.0f,0.0f));
+    Paddle paddleTwo( Vec2( WINDOW_WIDTH - 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f), Vec2(0.0f,0.0f));
 
     // Game logic
     {
         bool running = true;
+        bool buttons[4] = {};
+
+        float dt = 0.0f;
 
         // This keeps the program running 
-
         while (running)
         {
-
+            auto startTime = std::chrono::high_resolution_clock::now();
             SDL_Event event;
             while (SDL_PollEvent(&event)){
 
@@ -173,14 +200,83 @@ int main (){
 
                 else if (event.type == SDL_KEYDOWN){
                    
-                    if (event.key.keysym.sym == SDLK_ESCAPE){
+                    if (event.key.keysym.sym == SDLK_ESCAPE)
+                    {
                         running = false;
                     }
-                
+                    else if (event.key.keysym.sym == SDLK_w)
+                    {
+                        buttons[Buttons::PaddleOneUp] = true;
+                    }
+                    else if (event.key.keysym.sym == SDLK_s)
+                    {
+                        buttons[Buttons::PaddleOneDown] = true;                    
+                    }
+                    else if (event.key.keysym.sym == SDLK_UP)
+                    {
+                        buttons[Buttons::PaddleTwoUp] = true;
+                    }
+                    else if (event.key.keysym.sym == SDLK_DOWN)
+                    {
+                        buttons[Buttons::PaddleTwoDown] = true;
+                    
+                    }
                 } 
 
+                else if (event.type == SDL_KEYUP)
+
+                {
+                    if (event.key.keysym.sym == SDLK_w)
+                    {
+                        buttons[Buttons::PaddleOneUp] = false;
+                    }
+                    else if (event.key.keysym.sym == SDLK_s)
+                    {
+                        buttons[Buttons::PaddleOneDown] = false;
+                    }
+                    else if (event.key.keysym.sym == SDLK_UP)
+                    {
+                        buttons[Buttons::PaddleTwoUp] = false;
+                    }
+                    else if (event.key.keysym.sym == SDLK_DOWN)
+                    {
+                        buttons[Buttons::PaddleTwoDown] = false;
+                    }
+                }
             }
-            
+
+            //associating velocity - paddle one
+            if (buttons[Buttons::PaddleOneUp])
+            {
+                paddleOne.velocity.y = - PADDLE_SPEED;
+            }    
+            else if (buttons[Buttons::PaddleOneDown])
+            {
+                paddleOne.velocity.y = PADDLE_SPEED;
+            }
+            else
+            {
+                paddleOne.velocity.y = 0.0f;
+            }
+
+            // associating velocity - paddle two
+            if (buttons[Buttons::PaddleTwoUp])
+            {
+                paddleTwo.velocity.y = - PADDLE_SPEED;
+                std :: cout << "prova" << "\n";
+
+            }    
+            else if (buttons[Buttons::PaddleTwoDown])
+            {
+                paddleTwo.velocity.y = PADDLE_SPEED;
+            }
+            else
+            {
+                paddleTwo.velocity.y = 0.0f;
+            }
+
+            paddleOne.Update(dt);
+            paddleTwo.Update(dt);
 
             // Black window
             SDL_SetRenderDrawColor(renderer, 0x0,0x0,0x0,0xFF);
@@ -212,6 +308,9 @@ int main (){
             // Backbuffer 
             SDL_RenderPresent(renderer);
        
+            // Calculating time frame
+            auto stopTime = std::chrono::high_resolution_clock::now();
+            dt = std::chrono::duration<float, std::chrono::milliseconds::period>(stopTime-startTime).count();
         }
 
     }
