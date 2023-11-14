@@ -1,8 +1,22 @@
 #include <iostream>
+#include <chrono>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
 using namespace std;
+
+//list of possible moves
+enum Buttons
+{
+    PaddleOneUp   = 0,
+    PaddleOneDown ,
+    PaddleTwoUp   ,
+    PaddleTwoDown ,
+};
+
+//paddle speed
+const float PADDLE_SPEED = 10.0f;
+const float BALL_SPEED   = 10.0f;
 
 //first we have to set window height and width
 const int WINDOW_HEIGHT = 720;
@@ -51,16 +65,18 @@ class Vec2
 class Ball
 {
     public:
-        Vec2 position;
-        SDL_Rect rect{};
-
-        Ball(Vec2 position):
-            position(position)
+        Ball(Vec2 position, Vec2 velocity):
+            position(position), velocity(velocity)
         {
             rect.x = static_cast<int>(position.x);
             rect.y = static_cast<int>(position.y);
             rect.w = BALL_WIDTH;
             rect.h = BALL_HEIGHT;
+        }
+
+        void Update(float dt)
+        {
+            position += velocity * dt;
         }
 
         void Draw(SDL_Renderer* renderer)
@@ -70,18 +86,36 @@ class Ball
 
             SDL_RenderFillRect(renderer, &rect);        
         }
+
+        Vec2 position;
+        Vec2 velocity;
+        SDL_Rect rect{};
 };
 
 class Paddle
 {
     public:
-        Paddle(Vec2 position)
-            : position(position)
+        Paddle(Vec2 position, Vec2 velocity)
+            : position(position), velocity(velocity)
         {
             rect.x = static_cast<int>(position.x);
             rect.y = static_cast<int>(position.y);
             rect.h = PADDLE_HEIGHT;        
             rect.w = PADDLE_WIDTH;
+        }
+
+        void Update(float dt)
+        {
+            position += velocity*dt;
+
+            if (position.y<0)
+            {
+                position.y = 0;
+            } 
+            else if (position.y > (WINDOW_HEIGHT - PADDLE_HEIGHT))
+            {
+                position.y = WINDOW_HEIGHT - PADDLE_HEIGHT;
+            }
         }
 
         void Draw(SDL_Renderer* renderer)
@@ -92,6 +126,7 @@ class Paddle
         }
 
         Vec2 position;
+        Vec2 velocity;
         SDL_Rect rect{};
 
 };
@@ -140,7 +175,6 @@ int main(){
     
     //initializing text
     TTF_Init();    
-    
 
     SDL_Window*   window   = SDL_CreateWindow("Pong",0,0,WINDOW_WIDTH,WINDOW_HEIGHT,SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window,-1,0);
@@ -149,9 +183,10 @@ int main(){
     TTF_Font* scoreFont = TTF_OpenFont("DejaVuSansMono.ttf",40);
 
     //creating the paddles
-    Paddle paddleOne(Vec2(50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f));
-    Paddle paddleTwo(Vec2(WINDOW_WIDTH- 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f));
-
+    Paddle paddleOne(Vec2(50.0f, (WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f)),
+                     Vec2(0.0f,0.0f));
+    Paddle paddleTwo(Vec2(WINDOW_WIDTH- 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f),
+                     Vec2(0.0f,0.0f));
 
     //player text scores
     PlayerScore playerOneScoreText(Vec2(WINDOW_WIDTH/4,20),  renderer, scoreFont);
@@ -159,14 +194,19 @@ int main(){
 
     //creating the ball
     Ball ball(Vec2((WINDOW_WIDTH/2.0f) - (BALL_WIDTH/2.0f),
-                   (WINDOW_HEIGHT/2.0f) - (BALL_HEIGHT/2.0f)));
+                   (WINDOW_HEIGHT/2.0f) - (BALL_HEIGHT/2.0f)),
+              Vec2(BALL_SPEED,0.0f));
 
     //game logic
     {
-        bool running = true;
+        bool running    = true;
+        bool buttons[4] = {};
+        float dt = 0.0f;
+
         while(running)
         {
             SDL_Event event;
+            auto startTime = chrono::high_resolution_clock::now();
             while(SDL_PollEvent(&event))
             {
                 if(event.type == SDL_QUIT)
@@ -179,7 +219,73 @@ int main(){
                     {
                         running = false;
                     }
+                    else if(event.key.keysym.sym == SDLK_w)
+                    {
+                        buttons[Buttons::PaddleOneUp] = true;
+                    }
+                    else if(event.key.keysym.sym == SDLK_s)
+                    {
+                        buttons[Buttons::PaddleOneDown] = true;                        
+                    }
+                    else if(event.key.keysym.sym == SDLK_UP)
+                    {
+                        buttons[Buttons::PaddleTwoUp] = true;
+                    }
+                    else if(event.key.keysym.sym == SDLK_DOWN)
+                    {
+                        buttons[Buttons::PaddleTwoDown] = true;
+                    }
                 }
+
+                else if(event.type == SDL_KEYUP)
+                {
+                    if(event.key.keysym.sym == SDLK_w)
+                    {
+                        buttons[Buttons::PaddleOneUp] = false;
+                    }
+                    else if(event.key.keysym.sym == SDLK_s)
+                    {
+                        buttons[Buttons::PaddleOneDown] = false;                        
+                    }
+                    else if(event.key.keysym.sym == SDLK_UP)
+                    {
+                        buttons[Buttons::PaddleTwoUp] = false;
+                    }
+                    else if(event.key.keysym.sym == SDLK_DOWN)
+                    {
+                        buttons[Buttons::PaddleTwoDown] = false;
+                    }
+                }
+
+                if(buttons[Buttons::PaddleOneUp])
+                {
+                    paddleOne.velocity.y = -PADDLE_SPEED;
+                }
+                else if(buttons[Buttons::PaddleOneDown])
+                {
+                    paddleOne.velocity.y = PADDLE_SPEED;
+                }
+                else
+                {
+                    paddleOne.velocity.y = 0.0f;
+                }
+                
+                if(buttons[Buttons::PaddleTwoUp])
+                {
+                    paddleTwo.velocity.y = -PADDLE_SPEED;
+                }
+                else if(buttons[Buttons::PaddleTwoDown])
+                {
+                    paddleTwo.velocity.y = PADDLE_SPEED;
+                }
+                else
+                {
+                    paddleTwo.velocity.y = 0.0f;
+                }
+
+                paddleOne.Update(dt);
+            	paddleTwo.Update(dt);
+                ball.Update(dt);
             }
         //coloring the window
         SDL_SetRenderDrawColor(renderer, 0x0,0x0,0x0,0xFF);
@@ -208,6 +314,9 @@ int main(){
         playerTwoScoreText.Draw();
         //backbuffer
         SDL_RenderPresent(renderer);
+
+        auto stopTime = chrono::high_resolution_clock::now();
+        dt = chrono::duration<float, chrono::milliseconds::period>(stopTime-startTime).count();
         }
     }
 
