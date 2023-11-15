@@ -1,7 +1,10 @@
 #include <iostream>
 #include <chrono>
+#include <string>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
+
 
 using namespace std;
 
@@ -14,9 +17,21 @@ enum Buttons
     PaddleTwoDown ,
 };
 
-//paddle speed
-const float PADDLE_SPEED = 10.0f;
-const float BALL_SPEED   = 10.0f;
+enum class CollisionType
+{
+    None,
+    Top,
+    Middle,
+    Bottom,
+    Left,
+    Right
+};
+
+struct Contact
+{
+    CollisionType type;
+    float penetration;
+};  
 
 //first we have to set window height and width
 const int WINDOW_HEIGHT = 720;
@@ -25,10 +40,13 @@ const int WINDOW_WIDTH  = 1280;
 //ball dimensions
 const int BALL_WIDTH  = 15;
 const int BALL_HEIGHT = 15;
+const float BALL_SPEED   = 0.5f;
 
 //paddle dimensions
 const int PADDLE_WIDTH    = 10;
 const int PADDLE_HEIGHT   = 100;
+const float PADDLE_SPEED = 0.5f;
+
 
 // vettore
 class Vec2
@@ -79,6 +97,21 @@ class Ball
             position += velocity * dt;
         }
 
+        void CollideWithPaddle(Contact const& contact)
+        {
+            position.x += contact.penetration;
+            velocity.x = -velocity.x;
+
+            if (contact.type == CollisionType::Top)
+            {
+                velocity.y = -0.75f * BALL_SPEED;
+            }
+            else if (contact.type == CollisionType::Bottom)
+            {
+                velocity.y = 0.75f * BALL_SPEED;
+            }
+
+        }
         void Draw(SDL_Renderer* renderer)
         {
             rect.x = static_cast<int> (position.x);
@@ -168,6 +201,94 @@ class PlayerScore
         SDL_Rect rect{};
 };
 
+Contact CheckPaddleCollision(Ball const& ball, Paddle const& paddle)
+{
+    float ballLeft   = ball.position.x;
+    float ballRight  = ball.position.x + BALL_WIDTH;
+    float ballTop    = ball.position.y;
+    float ballBottom = ball.position.y + BALL_HEIGHT;
+
+    float paddleLeft   = paddle.position.x;
+    float paddleRight  = paddle.position.x + PADDLE_WIDTH;
+    float paddleTop    = paddle.position.y;
+    float paddleBottom = paddle.position.y + PADDLE_HEIGHT;
+
+    Contact contact{};
+
+    if (ballLeft >= paddleRight)
+    {
+        return contact;
+    }
+    if (ballRight <= paddleLeft)
+    {
+        return contact;
+    }
+    if (ballTop >= paddleBottom)
+    {
+        return contact;
+    }
+    if (ballBottom <= paddleTop)
+    {
+        return contact;
+    }
+
+    float paddleRangeUpper  = paddleBottom - (2.0f * PADDLE_HEIGHT)/3.0f;
+    float paddleRangeMiddle = paddleBottom - (PADDLE_HEIGHT)/3.0f;
+
+    if (ball.velocity.x < 0)
+    {   //left paddle
+        contact.penetration = paddleRight - ballLeft; 
+    }
+    else if (ball.velocity.x > 0)
+    {   //right paddle
+        contact.penetration = paddleLeft - ballRight;
+    }
+
+    if ((ballBottom > paddleTop) && (ballBottom < paddleRangeUpper))
+    {
+        contact.type = CollisionType::Top;
+    }
+    else if ((ballBottom > paddleRangeUpper) && (ballBottom < paddleRangeMiddle))
+    {
+        contact.type = CollisionType::Middle;
+    }
+    else
+    {
+        contact.type = CollisionType::Bottom;
+    }
+
+    return contact;
+}
+
+Contact CheckWallCollision(Ball const& ball)
+{
+    float ballLeft   = ball.position.x;
+    float ballRight  = ball.position.x + BALL_WIDTH;
+    float ballTop    = ball.position.y;
+    float ballBottom = ball.position.y + BALL_HEIGHT; 
+
+    Contact contact{};
+
+    if (ballLeft < 0.0f)
+    {
+        contact.type = CollisionType::Left;
+    }
+    else if (ballRight > WINDOW_WIDTH)
+    {
+        contact.type = CollisionType::Right;
+    }
+    else if (ballTop < 0.0f)
+    {
+        contact.type = CollisionType::Top;
+        contact.penetration = -ballTop;
+    }
+    else if (ballBottom > WINDOW_HEIGHT)
+    {
+        contact.type = CollisionType::Bottom;
+        contact.penetration = WINDOW_HEIGHT - ballBottom;
+    }
+    return contact;
+}
 
 int main(){
     //second, we have to initialize the layer components
@@ -182,31 +303,34 @@ int main(){
     //initializing the font
     TTF_Font* scoreFont = TTF_OpenFont("DejaVuSansMono.ttf",40);
 
-    //creating the paddles
-    Paddle paddleOne(Vec2(50.0f, (WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f)),
-                     Vec2(0.0f,0.0f));
-    Paddle paddleTwo(Vec2(WINDOW_WIDTH- 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f),
-                     Vec2(0.0f,0.0f));
-
-    //player text scores
-    PlayerScore playerOneScoreText(Vec2(WINDOW_WIDTH/4,20),  renderer, scoreFont);
-    PlayerScore playerTwoScoreText(Vec2(3*WINDOW_WIDTH/4,20),renderer, scoreFont);
-
-    //creating the ball
-    Ball ball(Vec2((WINDOW_WIDTH/2.0f) - (BALL_WIDTH/2.0f),
-                   (WINDOW_HEIGHT/2.0f) - (BALL_HEIGHT/2.0f)),
-              Vec2(BALL_SPEED,0.0f));
-
     //game logic
     {
+        //creating the paddles
+        Paddle paddleOne(Vec2(50.0f, (WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f)),
+                        Vec2(0.0f,0.0f));
+        Paddle paddleTwo(Vec2(WINDOW_WIDTH- 50.0f, WINDOW_HEIGHT/2.0f - PADDLE_HEIGHT/2.0f),
+                        Vec2(0.0f,0.0f));
+
+        //player text scores
+        PlayerScore playerOneScoreText(Vec2(WINDOW_WIDTH/4,20),  renderer, scoreFont);
+        PlayerScore playerTwoScoreText(Vec2(3*WINDOW_WIDTH/4,20),renderer, scoreFont);
+
+        //creating the ball
+        Ball ball(Vec2((WINDOW_WIDTH/2.0f) - (BALL_WIDTH/2.0f),
+                    (WINDOW_HEIGHT/2.0f) - (BALL_HEIGHT/2.0f)),
+                Vec2(BALL_SPEED,0.0f));
+
+
         bool running    = true;
         bool buttons[4] = {};
+
         float dt = 0.0f;
 
         while(running)
         {
-            SDL_Event event;
             auto startTime = chrono::high_resolution_clock::now();
+
+            SDL_Event event;
             while(SDL_PollEvent(&event))
             {
                 if(event.type == SDL_QUIT)
@@ -282,11 +406,23 @@ int main(){
                 {
                     paddleTwo.velocity.y = 0.0f;
                 }
-
-                paddleOne.Update(dt);
-            	paddleTwo.Update(dt);
-                ball.Update(dt);
             }
+
+        paddleOne.Update(dt);
+        paddleTwo.Update(dt);
+        ball.Update(dt);
+
+        if (Contact contact = CheckPaddleCollision(ball, paddleOne);
+            contact.type != CollisionType::None)
+        {
+            ball.CollideWithPaddle(contact);
+        }
+        else if (contact = CheckPaddleCollision(ball, paddleTwo);
+            contact.type != CollisionType::None)
+        {
+            ball.CollideWithPaddle(contact);
+        }
+
         //coloring the window
         SDL_SetRenderDrawColor(renderer, 0x0,0x0,0x0,0xFF);
         SDL_RenderClear(renderer);
@@ -312,6 +448,7 @@ int main(){
         //drawing the scores
         playerOneScoreText.Draw();
         playerTwoScoreText.Draw();
+        
         //backbuffer
         SDL_RenderPresent(renderer);
 
