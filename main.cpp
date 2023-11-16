@@ -5,9 +5,6 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
 
-
-using namespace std;
-
 //list of possible moves
 enum Buttons
 {
@@ -38,14 +35,14 @@ const int WINDOW_HEIGHT = 720;
 const int WINDOW_WIDTH  = 1280;
 
 //ball dimensions
-const int BALL_WIDTH  = 15;
-const int BALL_HEIGHT = 15;
-const float BALL_SPEED   = 0.5f;
+const int BALL_WIDTH   = 15;
+const int BALL_HEIGHT  = 15;
+const float BALL_SPEED = 0.5f;
 
 //paddle dimensions
 const int PADDLE_WIDTH    = 10;
 const int PADDLE_HEIGHT   = 100;
-const float PADDLE_SPEED = 0.5f;
+const float PADDLE_SPEED  = 0.5f;
 
 
 // vettore
@@ -120,6 +117,33 @@ class Ball
             SDL_RenderFillRect(renderer, &rect);        
         }
 
+        void CollideWithWall(Contact const& contact)
+        {
+            //top e bottom
+            if (contact.type==CollisionType::Bottom || contact.type==CollisionType::Top)
+            {
+                position.y += contact.penetration;
+                velocity.y = -velocity.y;
+            }
+            //left
+            else if (contact.type==CollisionType::Left)
+            {
+                position.x = WINDOW_WIDTH/2.0f;
+                position.y = WINDOW_HEIGHT/2.0f;
+                velocity.x = BALL_SPEED;
+                velocity.y = 0.75*BALL_SPEED;
+
+            }
+            //right
+            else if (contact.type==CollisionType::Right)
+            {
+                position.x = WINDOW_WIDTH/2.0f;
+                position.y = WINDOW_HEIGHT/2.0f;
+                velocity.x = -BALL_SPEED;
+                velocity.y = 0.75*BALL_SPEED;
+            }
+        }
+
         Vec2 position;
         Vec2 velocity;
         SDL_Rect rect{};
@@ -192,6 +216,20 @@ class PlayerScore
         void Draw()
         {
             SDL_RenderCopy(renderer, texture, nullptr, &rect);
+        }
+
+        void SetScore(int score)
+        {
+            SDL_FreeSurface(surface);
+            SDL_DestroyTexture(texture);
+
+            surface = TTF_RenderText_Solid(font,std::to_string(score).c_str(),{0xFF,0xFF,0xFF,0xFF});
+            texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+            int width, height;
+            SDL_QueryTexture(texture, nullptr, nullptr, &width, &height);
+            rect.w = width;                
+            rect.h = height;
         }
 
         SDL_Renderer* renderer;
@@ -320,6 +358,8 @@ int main(){
                     (WINDOW_HEIGHT/2.0f) - (BALL_HEIGHT/2.0f)),
                 Vec2(BALL_SPEED,0.0f));
 
+        int playerOneScore = 0;
+        int playerTwoScore = 0;
 
         bool running    = true;
         bool buttons[4] = {};
@@ -328,7 +368,7 @@ int main(){
 
         while(running)
         {
-            auto startTime = chrono::high_resolution_clock::now();
+            auto startTime = std::chrono::high_resolution_clock::now();
 
             SDL_Event event;
             while(SDL_PollEvent(&event))
@@ -412,6 +452,7 @@ int main(){
         paddleTwo.Update(dt);
         ball.Update(dt);
 
+        //checking collisions
         if (Contact contact = CheckPaddleCollision(ball, paddleOne);
             contact.type != CollisionType::None)
         {
@@ -421,6 +462,22 @@ int main(){
             contact.type != CollisionType::None)
         {
             ball.CollideWithPaddle(contact);
+        }
+        else if (contact = CheckWallCollision(ball);
+                 contact.type !=CollisionType::None)
+        {
+            ball.CollideWithWall(contact);
+
+            if(contact.type == CollisionType::Left)
+            {
+                ++playerOneScore;
+                playerOneScoreText.SetScore(playerOneScore);
+            }
+            else if(contact.type == CollisionType::Right)
+            {
+                ++playerTwoScore;
+                playerTwoScoreText.SetScore(playerTwoScore);
+            }
         }
 
         //coloring the window
@@ -452,8 +509,8 @@ int main(){
         //backbuffer
         SDL_RenderPresent(renderer);
 
-        auto stopTime = chrono::high_resolution_clock::now();
-        dt = chrono::duration<float, chrono::milliseconds::period>(stopTime-startTime).count();
+        auto stopTime = std::chrono::high_resolution_clock::now();
+        dt = std::chrono::duration<float, std::chrono::milliseconds::period>(stopTime-startTime).count();
         }
     }
 
