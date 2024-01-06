@@ -3,6 +3,7 @@
 #include <chrono>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 
 //first we have to set window height and width
 const int WINDOW_HEIGHT = 720;
@@ -20,11 +21,28 @@ const float PADDLE_SPEED  = 0.5f;
 
 enum Buttons
 {
-    PaddleOneUp = 0,
+    PaddleOneUp,
     PaddleOneDown,
     PaddleTwoUp,
     PaddleTwoDown,
 };
+
+enum class CollisionType
+{
+    None,
+    Top,
+    Middle,
+    Bottom,
+    Left,
+    Right,
+};
+
+struct Contact
+{
+    CollisionType type;
+    float penetration;
+};
+
 //Object classes
 class Vec2
 {   
@@ -97,6 +115,44 @@ class Ball
         float GetVy()
         {
             return m_velocity.GetY();
+        }
+
+        void CollideWithPaddle(Contact const& contact)
+        {
+            m_position.m_x += contact.penetration;
+            m_velocity.m_x  = -m_velocity.m_x;
+        
+            if (contact.type == CollisionType::Top)
+            {
+                m_velocity.m_y = - 0.75 * BALL_SPEED;
+            }
+            else if (contact.type == CollisionType::Bottom)
+            {
+                m_velocity.m_y = 0.75 * BALL_SPEED;
+            }
+        }
+
+        void CollideWithWall (Contact const& contact)
+        {
+            if ((contact.type == CollisionType::Top) || (contact.type == CollisionType::Bottom))
+            {
+                m_position.m_y += contact.penetration;
+                m_velocity.m_y = -m_velocity.m_y;
+            }
+            else if (contact.type == CollisionType::Left)
+            {
+                m_position.m_x = WINDOW_WIDTH / 2.0f;
+                m_position.m_y = WINDOW_HEIGHT / 2.0f;
+                m_velocity.m_x = BALL_SPEED;
+                m_velocity.m_y = 0.75f * BALL_SPEED;
+            }
+            else if (contact.type == CollisionType::Right)
+            {    
+                m_position.m_x = WINDOW_WIDTH / 2.0f;
+                m_position.m_y = WINDOW_HEIGHT / 2.0f;
+                m_velocity.m_x = -BALL_SPEED;
+                m_velocity.m_y = 0.75f * BALL_SPEED;
+            }
         }
 
         Vec2 m_position;
@@ -179,6 +235,20 @@ class PlayerScore
             SDL_RenderCopy(renderer, texture, nullptr, &rect);
         }
 
+        void SetScore(int score)
+        {
+            SDL_FreeSurface(surface);
+            SDL_DestroyTexture(texture);
+
+            surface = TTF_RenderText_Solid(font, std::to_string(score).c_str(), {0xFF,0xFF,0xFF,0xFF});
+            texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+            int width, height;
+            SDL_QueryTexture(texture, nullptr, nullptr, &width, &height);
+            rect.w = width;
+            rect.h = height;
+        }
+
         SDL_Renderer *renderer;
         TTF_Font *font;
         SDL_Surface *surface{};
@@ -186,7 +256,7 @@ class PlayerScore
         SDL_Rect rect{};
 };
 
-bool CheckPaddleCollision(Ball const &ball, Paddle const &paddle)
+Contact CheckPaddleCollision(Ball const &ball, Paddle const &paddle)
 {
     float ballLeft  = ball.GetX();
     float ballRight = ball.GetX() + BALL_WIDTH;
@@ -198,30 +268,89 @@ bool CheckPaddleCollision(Ball const &ball, Paddle const &paddle)
     float paddleTop   = paddle.GetY();
     float paddleBot   = paddle.GetY() + PADDLE_HEIGHT;
 
+    Contact contact{};
+
+    // non contact collisions
     if(ballLeft >= paddleRight)
     {
-        return false;
+        return contact;
     }
     else if (ballRight <= paddleLeft)
     {
-        return false;
+        return contact;
     }
     else if (ballTop >= paddleBot)
     {
-        return false;
+        return contact;
     }
     else if (ballBot <= paddleTop)
     {
-        return false;
+        return contact;
     }
 
-    return true;
+    float paddleRangeUpper  = paddleBot - (2.0f * PADDLE_HEIGHT / 3.0f);
+    float paddleRangeMiddle = paddleBot - (PADDLE_HEIGHT / 3.0f);
+
+    if (ball.m_velocity.m_x < 0)
+    {   // left paddle
+        contact.penetration = paddleRight - ballLeft;
+    }
+    else if (ball.m_velocity.m_x > 0)
+    {   // right paddle
+        contact.penetration = paddleLeft - ballRight;
+    }
+
+    if ((ballBot > paddleTop) && (ballBot < paddleRangeUpper))
+    {
+        contact.type = CollisionType::Top;
+    }
+    else if ((ballBot > paddleTop) && (ballBot < paddleRangeMiddle))
+    {
+        contact.type = CollisionType::Middle;
+    }
+    else
+    {
+        contact.type = CollisionType::Bottom;
+    }
+    return contact;
+}
+
+Contact CheckWallCollision (Ball const& ball)
+{
+    float ballLeft  = ball.GetX();
+    float ballRight = ball.GetX() + BALL_WIDTH;
+    float ballTop   = ball.GetY();
+    float ballBot   = ball.GetY() + BALL_HEIGHT;
+
+    Contact contact{};
+
+    if (ballLeft < 0.0f)
+    {
+        contact.type = CollisionType::Left;
+    }
+    else if (ballRight > WINDOW_WIDTH)
+    {
+        contact.type = CollisionType::Right;
+    }
+    else if (ballTop < 0.0f)
+    {
+        contact.type = CollisionType::Top;
+        contact.penetration = - ballTop;
+    }
+    else if (ballBot > WINDOW_HEIGHT)
+    {
+        contact.type = CollisionType::Bottom;
+        contact.penetration = WINDOW_HEIGHT - ballBot;
+    }
+
+    return contact;
 }
 
 int main()
 {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
 
     SDL_Window   *window    = SDL_CreateWindow("My pong",0,0,WINDOW_WIDTH,WINDOW_HEIGHT,SDL_WINDOW_SHOWN);
     SDL_Renderer *renderer  = SDL_CreateRenderer(window,-1,0);
@@ -244,7 +373,15 @@ int main()
                      Vec2(0,0),
                      PADDLE_WIDTH, PADDLE_HEIGHT);
 
+    //initialize sound effects
+    Mix_Chunk *wallHitSound   = Mix_LoadWAV("WallHit.wav");
+    Mix_Chunk *paddleHitSound = Mix_LoadWAV("PaddleHit.wav");            
+
+
     {   //game logic
+        int playerOnescore = 0;
+        int playerTwoscore = 0;
+
         bool running    = true;
         bool buttons[4] = {};
 
@@ -360,18 +497,48 @@ int main()
             paddleTwo.Update(dt);
             ball.Update(dt);
 
-            //checking collisions
-            if (CheckPaddleCollision(ball, paddleOne) || CheckPaddleCollision(ball, paddleTwo))
-            {   
-                ball.m_velocity.m_x = - ball.m_velocity.m_x;
+
+            //check collisions
+            if (Contact contact = CheckPaddleCollision(ball, paddleOne); contact.type != CollisionType::None)
+            {
+                ball.CollideWithPaddle(contact);
+                Mix_PlayChannel(-1, paddleHitSound, 0);
+
+            }
+            else if (Contact contact = CheckPaddleCollision(ball, paddleTwo); contact.type != CollisionType::None)
+            {
+                ball.CollideWithPaddle(contact);
+                Mix_PlayChannel(-1, paddleHitSound, 0);
+
+            }
+            else if (Contact contact = CheckWallCollision(ball); contact.type != CollisionType::None)
+            {
+                ball.CollideWithWall(contact);
+
+                if(contact.type == CollisionType::Left)
+                {
+                    ++playerTwoscore;
+                    playerTwoScoreText.SetScore(playerTwoscore);
+                }
+                else if (contact.type == CollisionType::Right)
+                {
+                    ++playerOnescore;
+                    playerOneScoreText.SetScore(playerOnescore);
+                }
+                else
+                {
+                    Mix_PlayChannel(-1, wallHitSound, 0);
+                }
             }
         }
     }
 
-    
+    Mix_FreeChunk(wallHitSound);
+    Mix_FreeChunk(paddleHitSound);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     TTF_CloseFont(scorefont);
+    Mix_Quit();
     TTF_Quit();
     SDL_Quit();
 
