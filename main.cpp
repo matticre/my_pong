@@ -43,7 +43,7 @@ struct Contact
     float penetration;
 };
 
-//Object classes
+//object classes
 class Vec2
 {   
     public:
@@ -384,7 +384,7 @@ int main()
 
         bool running    = true;
         bool buttons[4] = {};
-
+        
         float dt = 0.0f;
 
         while(running)
