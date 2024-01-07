@@ -1,9 +1,11 @@
-#include <string>
-#include <iostream>
-#include <chrono>
+#include "include/Vec2.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
+#include <string>
+#include <iostream>
+#include <chrono>
+
 
 //first we have to set window height and width
 const int WINDOW_HEIGHT = 720;
@@ -44,7 +46,7 @@ struct Contact
 };
 
 //object classes
-class Vec2
+/* class Vec2
 {   
     public:
         Vec2(): 
@@ -52,7 +54,7 @@ class Vec2
 
         Vec2(float x, float y): m_x(x), m_y(y){};
         float GetX() const {return m_x;};
-        float GetY() const{return m_y;};
+        float GetY() const {return m_y;};
         void  SetX(const float &x) {m_x = x;};   
         void  SetY(const float &y) {m_y = y;};
 
@@ -64,10 +66,11 @@ class Vec2
             return *this;
         };
         Vec2 operator*(const float &c) { return Vec2(c* m_x, c*m_y);};
-
+    
+    private:
         float m_x;
         float m_y;
-};
+}; */
 
 class Ball
 {
@@ -119,16 +122,17 @@ class Ball
 
         void CollideWithPaddle(Contact const& contact)
         {
-            m_position.m_x += contact.penetration;
-            m_velocity.m_x  = -m_velocity.m_x;
+            m_position.SetX( m_position.GetX() + contact.penetration);
+            m_velocity.SetX( - m_velocity.GetX());
+
         
             if (contact.type == CollisionType::Top)
             {
-                m_velocity.m_y = - 0.75 * BALL_SPEED;
+                m_velocity.SetY( - 0.75 * BALL_SPEED);
             }
             else if (contact.type == CollisionType::Bottom)
             {
-                m_velocity.m_y = 0.75 * BALL_SPEED;
+                m_velocity.SetY( 0.75 * BALL_SPEED);
             }
         }
 
@@ -136,22 +140,22 @@ class Ball
         {
             if ((contact.type == CollisionType::Top) || (contact.type == CollisionType::Bottom))
             {
-                m_position.m_y += contact.penetration;
-                m_velocity.m_y = -m_velocity.m_y;
+                m_position.SetY( m_position.GetY() + contact.penetration);
+                m_velocity.SetY( - m_velocity.GetY());
             }
             else if (contact.type == CollisionType::Left)
             {
-                m_position.m_x = WINDOW_WIDTH / 2.0f;
-                m_position.m_y = WINDOW_HEIGHT / 2.0f;
-                m_velocity.m_x = BALL_SPEED;
-                m_velocity.m_y = 0.75f * BALL_SPEED;
+                m_position.SetX( WINDOW_WIDTH / 2.0f );
+                m_position.SetY( WINDOW_HEIGHT / 2.0f );
+                m_velocity.SetX( -BALL_SPEED );
+                m_velocity.SetY( 0.0f );
             }
             else if (contact.type == CollisionType::Right)
             {    
-                m_position.m_x = WINDOW_WIDTH / 2.0f;
-                m_position.m_y = WINDOW_HEIGHT / 2.0f;
-                m_velocity.m_x = -BALL_SPEED;
-                m_velocity.m_y = 0.75f * BALL_SPEED;
+                m_position.SetX( WINDOW_WIDTH / 2.0f );
+                m_position.SetY( WINDOW_HEIGHT / 2.0f );
+                m_velocity.SetX( BALL_SPEED );
+                m_velocity.SetY( 0.0f );
             }
         }
 
@@ -291,11 +295,11 @@ Contact CheckPaddleCollision(Ball const &ball, Paddle const &paddle)
     float paddleRangeUpper  = paddleBot - (2.0f * PADDLE_HEIGHT / 3.0f);
     float paddleRangeMiddle = paddleBot - (PADDLE_HEIGHT / 3.0f);
 
-    if (ball.m_velocity.m_x < 0)
+    if (ball.m_velocity.GetX() < 0)
     {   // left paddle
         contact.penetration = paddleRight - ballLeft;
     }
-    else if (ball.m_velocity.m_x > 0)
+    else if (ball.m_velocity.GetX() > 0)
     {   // right paddle
         contact.penetration = paddleLeft - ballRight;
     }
@@ -356,7 +360,7 @@ int main()
     SDL_Renderer *renderer  = SDL_CreateRenderer(window,-1,0);
 
     //Initializing fonts and player score
-    TTF_Font     *scorefont = TTF_OpenFont("DejaVuSansMono.ttf", 40);
+    TTF_Font     *scorefont = TTF_OpenFont("media/DejaVuSansMono.ttf", 40);
 
     PlayerScore playerOneScoreText(Vec2(WINDOW_WIDTH / 4, 20), renderer, scorefont);
     PlayerScore playerTwoScoreText(Vec2(3 * WINDOW_WIDTH / 4, 20), renderer, scorefont);
@@ -374,8 +378,8 @@ int main()
                      PADDLE_WIDTH, PADDLE_HEIGHT);
 
     //initialize sound effects
-    Mix_Chunk *wallHitSound   = Mix_LoadWAV("WallHit.wav");
-    Mix_Chunk *paddleHitSound = Mix_LoadWAV("PaddleHit.wav");            
+    Mix_Chunk *wallHitSound   = Mix_LoadWAV("media/WallHit.wav");
+    Mix_Chunk *paddleHitSound = Mix_LoadWAV("media/PaddleHit.wav");            
 
 
     {   //game logic
