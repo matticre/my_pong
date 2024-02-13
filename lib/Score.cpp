@@ -1,9 +1,13 @@
 #include "../include/Score.h"
+#include <iostream>
 
 Score::Score (float position):m_position(position)
 {
     m_score = 0;
-    m_font.loadFromFile("/home/mattia/github/my_pong/media/DejaVuSansMono.ttf");
+    if(!m_font.loadFromFile("DejaVuSansMono.ttf"))
+    {
+        std::cerr << "Error! Font not loaded." << std::endl; 
+    }
     m_text.setFont(m_font);
     m_text.setString(std::to_string((m_score)));
     m_text.setCharacterSize(35);

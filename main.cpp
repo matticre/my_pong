@@ -6,6 +6,7 @@
 #include "include/Constants.h"
 #include "include/Net.h"
 #include "include/Score.h"
+#include "include/Menu.h"
 #include <iostream>
 #include <chrono>
 #include <random>
@@ -124,8 +125,8 @@ int main()
     hitWallSound.setBuffer(wallBuffer);
     hitPaddleSound.setBuffer(paddleBuffer);
 
-    Ball ball(sf::Vector2f(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2),
-              sf::Vector2f(BALL_SPEED,0));  
+    Ball ball(sf::Vector2f(WINDOW_WIDTH / 2 - BALL_WIDTH / 2, WINDOW_HEIGHT / 2 - BALL_HEIGHT / 2),
+              sf::Vector2f(0.0f,0.0f));  
     Paddle paddleOne(sf::Vector2f(PADDLE_ONE_X, WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2), sf::Vector2f(0,0));
     Paddle paddleTwo(sf::Vector2f(PADDLE_TWO_X, WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2), sf::Vector2f(0,0));
     Score scoreOne(WINDOW_WIDTH * 0.25);
@@ -135,10 +136,50 @@ int main()
     Net goalNetOne(PADDLE_ONE_X);
     Net goalNetTwo(PADDLE_TWO_X);
 
+    Menu menu;
+
     float dt = 0.0f;
     bool buttons[4] = {};
 
-    while (window.isOpen())
+    bool runMenu = true;
+    bool runGame = true;
+
+    while(runMenu)
+    {
+        sf::Event event;
+
+        while(window.pollEvent(event))
+        {
+            if (event.type == sf::Event::KeyReleased)
+            {
+                if (event.key.code == sf::Keyboard::Escape)
+                {
+                    runMenu = false;
+                    runGame = false;
+                }   
+                else if (event.key.code == sf::Keyboard::Up)
+                {
+                    menu.MoveUp();
+                    menu.Draw(window);
+                    window.display();
+                }
+                else if (event.key.code == sf::Keyboard::Down)
+                {
+                    menu.MoveDown();
+                    menu.Draw(window);
+                    window.display();    
+                }
+
+                menu.Select(event, runMenu, runGame);
+            }
+        }
+
+        window.clear(sf::Color::Black);
+        menu.Draw(window);
+        window.display();    
+    }
+
+    while (runGame)
     {
         auto startTime = std::chrono::high_resolution_clock::now();
         sf::Event event;
@@ -146,13 +187,13 @@ int main()
         {
             if (event.type == sf::Event::Closed)
             {
-                window.close();
+                runGame = false;
             }
             if (event.type == sf::Event::KeyPressed)
             {
                 if (event.key.code == sf::Keyboard::Escape)
                 {
-                    window.close();
+                    runGame = false;
                 }
                 else if (event.key.code == sf::Keyboard::W)
                 {
@@ -243,7 +284,7 @@ int main()
                 paddleTwo.SetVy(0.0f);
             }
         }
-
+        
         if(Contact contact = checkPaddleCollision(ball, paddleOne); contact.type != CollisionType::None)
         {
             ball.CollideWithPaddle(contact);
@@ -286,10 +327,12 @@ int main()
         goalNetOne.Draw(window);
         goalNetTwo.Draw(window);
         scoreOne.Draw(window);
-        scoreTwo.Draw(window);
-
+        scoreTwo.Draw(window); 
+      
         window.display();
-    } 
+    }
+
+    window.close();
 
     return 0;
 }
