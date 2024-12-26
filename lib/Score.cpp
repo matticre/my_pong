@@ -4,7 +4,7 @@
 Score::Score (float position):m_position(position)
 {
     m_score = 0;
-    if(!m_font.loadFromFile("DejaVuSansMono.ttf"))
+    if(!m_font.loadFromFile("./media/DejaVuSansMono.ttf"))
     {
         std::cerr << "Error! Font not loaded." << std::endl; 
     }

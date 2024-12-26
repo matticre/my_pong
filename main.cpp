@@ -118,8 +118,8 @@ int main()
 
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "My pong");
     sf::SoundBuffer wallBuffer, paddleBuffer;
-    wallBuffer.loadFromFile("/home/mattia/github/my_pong/media/WallHit.wav");
-    paddleBuffer.loadFromFile("/home/mattia/github/my_pong/media/PaddleHit.wav");
+    wallBuffer.loadFromFile("./media/WallHit.wav");
+    paddleBuffer.loadFromFile("./media/PaddleHit.wav");
 
     sf::Sound hitWallSound, hitPaddleSound;
     hitWallSound.setBuffer(wallBuffer);
@@ -173,6 +173,7 @@ int main()
                 menu.Select(event, runMenu, runGame);
             }
         }
+
 
         window.clear(sf::Color::Black);
         menu.Draw(window);

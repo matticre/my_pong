@@ -5,7 +5,7 @@ Menu::Menu()
 {
     m_selected = 0;
 
-    if (!m_font.loadFromFile("DejaVuSansMono.ttf"))
+    if (!m_font.loadFromFile("./media/DejaVuSansMono.ttf"))
     {
         std::cerr << "Error! Font not loaded." << std::endl; 
     }
