@@ -1,3 +1,10 @@
+/**
+ * @file main.cpp
+ * @brief This file contains the main entry point and game loop for the Pong game.
+ *
+ * It handles the game window, user input, collision detection, and drawing all game objects.
+ */
+
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <SFML/System/Vector2.hpp>
@@ -11,67 +18,83 @@
 #include <chrono>
 #include <random>
 
-enum Buttons
-{
+/**
+ * @enum Buttons
+ * @brief An enumeration to represent the state of control buttons for the paddles.
+ */
+enum Buttons{
     PaddleOneUp,
     PaddleOneDown,
     PaddleTwoUp,
     PaddleTwoDown,
 };
 
-Contact checkPaddleCollision(const Ball &ball, const Paddle &paddle)
-{
+/**
+ * @brief Checks for a collision between the ball and a paddle.
+ *
+ * This function calculates the collision and returns a Contact struct
+ * containing information about the collision type and penetration.
+ *
+ * @param ball The Ball object to check.
+ * @param paddle The Paddle object to check against.
+ * @return A Contact struct with collision details.
+ */
+Contact checkPaddleCollision(const Ball &ball, const Paddle &paddle){
     float ballLeft  = ball.GetPosition().x;
     float ballRight = ball.GetPosition().x + BALL_WIDTH;
     float ballTop   = ball.GetPosition().y;
     float ballBot   = ball.GetPosition().y + BALL_HEIGHT;
 
     float paddleLeft  = paddle.GetPosition().x;
-    float paddleRight = paddle.GetPosition().x + PADDLE_WIDTH; 
+    float paddleRight = paddle.GetPosition().x + PADDLE_WIDTH;
     float paddleTop   = paddle.GetPosition().y;
     float paddleBot   = paddle.GetPosition().y + PADDLE_HEIGHT;
 
     Contact contact{};
 
-    //non-contact collisions
-    if (ballRight <= paddleLeft){
+    // non-contact collisions
+    if (ballRight <= paddleLeft)
         return contact;
-    }
-    else if (ballLeft >= paddleRight){
+    
+    else if (ballLeft >= paddleRight)
         return contact;
-    }
-    else if (ballBot <= paddleTop){
+    
+    else if (ballBot <= paddleTop)
         return contact;
-    }
-    else if (ballTop >= paddleBot){
+    
+    else if (ballTop >= paddleBot)
         return contact;
-    }
 
     float paddleUpRange     = paddleBot - 2 * PADDLE_HEIGHT / 3;
     float paddleMiddleRange = paddleBot - PADDLE_HEIGHT / 3;
 
-    if (ball.GetVx() < 0){
-        contact.penetration = paddleRight - ballLeft; 
-    }
-    else if (ball.GetVx() > 0){
-        contact.penetration = paddleLeft - ballRight; 
-    } 
+    if (ball.GetVx() < 0)
+        contact.penetration = paddleRight - ballLeft;
+    
+    else if (ball.GetVx() > 0)
+        contact.penetration = paddleLeft - ballRight;
 
-    if ((ballBot > paddleTop) && (ballBot < paddleUpRange)){
+    if ((ballBot > paddleTop) && (ballBot < paddleUpRange))
         contact.type = CollisionType::Top;
-    }
-    else if ((ballBot > paddleTop) && (ballBot < paddleMiddleRange)){
+    
+    else if ((ballBot > paddleTop) && (ballBot < paddleMiddleRange))
         contact.type = CollisionType::Middle;
-    }
-    else {
+    
+    else 
         contact.type = CollisionType::Bot;
-    }
 
     return contact;
 }
 
-Contact checkWallCollision (const Ball &ball)
-{
+/**
+ * @brief Checks for a collision between the ball and the game window's walls.
+ *
+ * This function determines if the ball has hit a wall and returns a Contact struct.
+ *
+ * @param ball The Ball object to check.
+ * @return A Contact struct with collision details.
+ */
+Contact checkWallCollision (const Ball &ball){
     float ballLeft  = ball.GetPosition().x;
     float ballRight = ball.GetPosition().x + BALL_WIDTH;
     float ballTop   = ball.GetPosition().y;
@@ -80,20 +103,17 @@ Contact checkWallCollision (const Ball &ball)
     Contact contact{};
 
     if (ballLeft < 0.0f)
-    {
         contact.type = CollisionType::Left;
-    }
+    
     else if (ballRight > WINDOW_WIDTH)
-    {
         contact.type = CollisionType::Right;
-    }
-    else if (ballTop < 0.0f)
-    {
+   
+    else if (ballTop < 0.0f){
         contact.type = CollisionType::Top;
         contact.penetration = -ballTop;
     }
-    else if (ballBot > WINDOW_HEIGHT)
-    {
+    
+    else if (ballBot > WINDOW_HEIGHT){
         contact.type = CollisionType::Bot;
         contact.penetration = WINDOW_HEIGHT - ballBot;
     }
@@ -101,8 +121,15 @@ Contact checkWallCollision (const Ball &ball)
     return contact;
 }
 
-int main()
-{
+/**
+ * @brief The main function of the program.
+ *
+ * This function initializes the game, runs the main menu loop, and then the main game loop.
+ * It handles all game events, updates, and rendering.
+ *
+ * @return 0 on successful execution.
+ */
+int main(){
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(0,1);
@@ -117,7 +144,7 @@ int main()
     hitPaddleSound.setBuffer(paddleBuffer);
 
     Ball ball(sf::Vector2f(WINDOW_WIDTH / 2 - BALL_WIDTH / 2, WINDOW_HEIGHT / 2 - BALL_HEIGHT / 2),
-              sf::Vector2f(0.0f,0.0f));  
+              sf::Vector2f(0.0f,0.0f));
     Paddle paddleOne(sf::Vector2f(PADDLE_ONE_X, WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2), sf::Vector2f(0,0));
     Paddle paddleTwo(sf::Vector2f(PADDLE_TWO_X, WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2), sf::Vector2f(0,0));
     Score scoreOne(WINDOW_WIDTH * 0.25);
@@ -135,30 +162,27 @@ int main()
     bool runMenu = true;
     bool runGame = true;
 
-    while(runMenu)
-    {
+    // Main menu loop
+    while(runMenu){
         sf::Event event;
 
-        while(window.pollEvent(event))
-        {
-            if (event.type == sf::Event::KeyReleased)
-            {
-                if (event.key.code == sf::Keyboard::Escape)
-                {
+        while(window.pollEvent(event)){
+            if (event.type == sf::Event::KeyReleased){
+                if (event.key.code == sf::Keyboard::Escape){
                     runMenu = false;
                     runGame = false;
-                }   
-                else if (event.key.code == sf::Keyboard::Up)
-                {
+                }
+
+                else if (event.key.code == sf::Keyboard::Up){
                     menu.MoveUp();
                     menu.Draw(window);
                     window.display();
                 }
-                else if (event.key.code == sf::Keyboard::Down)
-                {
+
+                else if (event.key.code == sf::Keyboard::Down){
                     menu.MoveDown();
                     menu.Draw(window);
-                    window.display();    
+                    window.display();
                 }
 
                 menu.Select(event, runMenu, runGame);
@@ -168,149 +192,112 @@ int main()
 
         window.clear(sf::Color::Black);
         menu.Draw(window);
-        window.display();    
+        window.display();
     }
 
-    while (runGame)
-    {
+    // Main game loop
+    while (runGame){
         auto startTime = std::chrono::high_resolution_clock::now();
         sf::Event event;
-        while (window.pollEvent(event))
-        {
+        while (window.pollEvent(event)){
             if (event.type == sf::Event::Closed)
-            {
                 runGame = false;
-            }
-            if (event.type == sf::Event::KeyPressed)
-            {
+            
+            if (event.type == sf::Event::KeyPressed){
                 if (event.key.code == sf::Keyboard::Escape)
-                {
                     runGame = false;
-                }
+                
                 else if (event.key.code == sf::Keyboard::W)
-                {
                     buttons[Buttons::PaddleOneUp] = true;
-                }
+                
                 else if (event.key.code == sf::Keyboard::S)
-                {
                     buttons[Buttons::PaddleOneDown] = true;
-                }
+                
                 else if (event.key.code == sf::Keyboard::Up)
-                {
                     buttons[Buttons::PaddleTwoUp] = true;
-                }
+                
                 else if (event.key.code == sf::Keyboard::Down)
-                {
                     buttons[Buttons::PaddleTwoDown] = true;
-                }
-                else if (event.key.code == sf::Keyboard::Space)
-                {
-                    if (ball.GetVelocity() == sf::Vector2f(0.0f,0.0f))
-                    {
+                
+                else if (event.key.code == sf::Keyboard::Space){
+                    if (ball.GetVelocity() == sf::Vector2f(0.0f,0.0f)){
                         if (scoreOne.GetScore() > scoreTwo.GetScore())
-                        {
                             ball.SetVx(BALL_SPEED);
-                        } 
+                        
                         else if (scoreOne.GetScore() < scoreTwo.GetScore())
-                        {
                             ball.SetVx(-BALL_SPEED);
-                        }
-                        else 
-                        {
+                        
+                        else {
                             float num = dis(gen);
                             if(num > 0.5)
-                            {
                                 ball.SetVx(BALL_SPEED);
-                            }
-                            else 
-                            {
+                            else
                                 ball.SetVx(-BALL_SPEED);
-                            }
                         }
                     }
                 }
             }
-            else if (event.type == sf::Event::KeyReleased)
-            {
-                if (event.key.code == sf::Keyboard::W)
-                {
-                    buttons[Buttons::PaddleOneUp] = false;
-                }
-                else if (event.key.code == sf::Keyboard::S)
-                {
-                    buttons[Buttons::PaddleOneDown] = false ;
-                }
-                else if (event.key.code == sf::Keyboard::Up)
-                {
-                    buttons[Buttons::PaddleTwoUp] = false;
-                }
-                else if (event.key.code == sf::Keyboard::Down)
-                {
-                    buttons[Buttons::PaddleTwoDown] = false ;
-                }
-            }
             
+            else if (event.type == sf::Event::KeyReleased){
+                if (event.key.code == sf::Keyboard::W)
+                    buttons[Buttons::PaddleOneUp] = false;
+                
+                else if (event.key.code == sf::Keyboard::S)
+                    buttons[Buttons::PaddleOneDown] = false ;
+                
+                else if (event.key.code == sf::Keyboard::Up)
+                    buttons[Buttons::PaddleTwoUp] = false;
+                
+                else if (event.key.code == sf::Keyboard::Down)
+                    buttons[Buttons::PaddleTwoDown] = false ;
+            }
+
             if (buttons[Buttons::PaddleOneUp])
-            {
                 paddleOne.SetVy(-PADDLE_SPEED);
-            }
+            
             else if (buttons[Buttons::PaddleOneDown])
-            {
                 paddleOne.SetVy(PADDLE_SPEED);
-            }
+            
             else
-            {
                 paddleOne.SetVy(0.0f);
-            }
 
             if (buttons[Buttons::PaddleTwoUp])
-            {
                 paddleTwo.SetVy(-PADDLE_SPEED);
-            }
+            
             else if (buttons[Buttons::PaddleTwoDown])
-            {
                 paddleTwo.SetVy(PADDLE_SPEED);
-            }
+            
             else
-            {
                 paddleTwo.SetVy(0.0f);
-            }
         }
-        
-        if(Contact contact = checkPaddleCollision(ball, paddleOne); contact.type != CollisionType::None)
-        {
+
+        if(Contact contact = checkPaddleCollision(ball, paddleOne); contact.type != CollisionType::None){
             ball.CollideWithPaddle(contact);
             hitPaddleSound.play();
         }
-        else if(Contact contact = checkPaddleCollision(ball, paddleTwo); contact.type != CollisionType::None)
-        {
+        else if(Contact contact = checkPaddleCollision(ball, paddleTwo); contact.type != CollisionType::None){
             ball.CollideWithPaddle(contact);
             hitPaddleSound.play();
         }
 
-        if(Contact contact = checkWallCollision(ball); contact.type != CollisionType::None)
-        {
+        if(Contact contact = checkWallCollision(ball); contact.type != CollisionType::None){
             ball.CollideWithWall(contact);
             hitWallSound.play();
 
             if (contact.type == CollisionType::Left)
-            {
                 scoreTwo.Increase();
-            }
             else if (contact.type == CollisionType::Right)
-            {
                 scoreOne.Increase();
-            }
         }
 
         auto stopTime = std::chrono::high_resolution_clock::now();
         dt = std::chrono::duration<float, std::chrono::milliseconds::period>(stopTime-startTime).count();
-        
+
         //Update
         ball.Update(dt);
         paddleOne.Update(dt);
         paddleTwo.Update(dt);
-        
+
         window.clear(sf::Color::Black);
         ball.Draw(window);
         paddleOne.Draw(window);
@@ -319,8 +306,8 @@ int main()
         goalNetOne.Draw(window);
         goalNetTwo.Draw(window);
         scoreOne.Draw(window);
-        scoreTwo.Draw(window); 
-      
+        scoreTwo.Draw(window);
+
         window.display();
     }
 

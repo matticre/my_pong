@@ -6,9 +6,7 @@ Menu::Menu()
     m_selected = 0;
 
     if (!m_font.loadFromFile("./media/DejaVuSansMono.ttf"))
-    {
         std::cerr << "Error! Font not loaded." << std::endl; 
-    }
 
     m_menu_text.resize(2);
 
@@ -25,55 +23,42 @@ Menu::Menu()
     m_menu_text[1].setCharacterSize(60);
 }
 
-void Menu::Draw(sf::RenderWindow &window)
-{
+void Menu::Draw(sf::RenderWindow &window){
     window.draw(m_menu_text[0]);
     window.draw(m_menu_text[1]);
 }
 
-void Menu::MoveUp()
-{
-    if (m_selected >= 0)
-    {
+void Menu::MoveUp(){
+    if (m_selected >= 0){
         m_menu_text[m_selected].setFillColor(sf::Color::White);
         --m_selected;
         
         if (m_selected < 0)
-        {
             m_selected = 1;
-        }
 
         m_menu_text[m_selected].setFillColor(sf::Color::Blue);
     }
 }
 
-void Menu::MoveDown()
-{
-    if (m_selected <= m_menu_text.size())
-    {
+void Menu::MoveDown(){
+    if (m_selected <= m_menu_text.size()){
         m_menu_text[m_selected].setFillColor(sf::Color::White);
         ++m_selected;
         
         if (m_selected >= 2)
-        {
             m_selected = 0;
-        }
 
         m_menu_text[m_selected].setFillColor(sf::Color::Blue);
     }
 }
 
-void Menu::Select(sf::Event &event, bool &runMenu, bool &runGame)
-{ 
-    if (event.key.code == sf::Keyboard::Enter)
-    {
+void Menu::Select(sf::Event &event, bool &runMenu, bool &runGame){ 
+    if (event.key.code == sf::Keyboard::Enter){
         std::cout << m_selected << std::endl;
         if (m_selected == 0)
-        {
             runMenu = false;
-        }
-        else 
-        {
+        
+        else {
             runMenu = false;
             runGame = false;
         }
