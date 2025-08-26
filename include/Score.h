@@ -12,8 +12,7 @@
  * @class Score
  * @brief Represents the score display for a player.
  */
-class Score
-{
+class Score{
     public:
         /**
          * @brief Constructs a new Score object.

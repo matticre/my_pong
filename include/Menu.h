@@ -12,8 +12,7 @@
  * @class Menu
  * @brief Represents the main menu of the game, handling navigation and selection.
  */
-class Menu
-{
+class Menu{
     public:
         /**
          * @brief Constructs a new Menu object.

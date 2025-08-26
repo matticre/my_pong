@@ -11,8 +11,7 @@
  * @class Net
  * @brief Represents a net or line in the game, used for the center line and goals.
  */
-class Net
-{
+class Net{
     public:
         /**
          * @brief Constructs a new Net object.

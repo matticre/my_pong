@@ -12,8 +12,7 @@
  * @enum CollisionType
  * @brief An enumeration to define the type of collision that occurred.
  */
-enum class CollisionType
-{
+enum class CollisionType{
     None,
     Top,
     Middle,
@@ -26,8 +25,7 @@ enum class CollisionType
  * @struct Contact
  * @brief A structure to hold information about a collision.
  */
-struct Contact
-{
+struct Contact{
     CollisionType type; ///< The type of collision.
     float penetration;  ///< The depth of penetration.
 };
@@ -36,8 +34,7 @@ struct Contact
  * @class Ball
  * @brief Represents the ball in the game, handling its movement and collisions.
  */
-class Ball
-{
+class Ball{
     public:
         /**
          * @brief Constructs a new Ball object.

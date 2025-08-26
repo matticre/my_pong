@@ -14,8 +14,7 @@
  *
  * This class handles the movement and rendering of a paddle.
  */
-class Paddle
-{
+class Paddle{
     public:
         /**
          * @brief Constructs a new Paddle object.
