@@ -37,3 +37,4 @@ The easiest way to build and run the game is by using the provided `run.sh` scri
 
   * The sound effects for the paddle and wall hits were foung at https://freesound.org/people/NoiseCollector/.
   * The font used for the score and menu is `DejaVuSansMono.ttf`.
+  * Thanks to Austin Morlan which built the original project on which this porting is based on.
